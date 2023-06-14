@@ -1,7 +1,7 @@
 #################################################################################################
 # Dockerfile to run the Nextflow alignment pipeline
 #################################################################################################
-FROM ubuntu:16.04
+FROM ubuntu:22.04
 MAINTAINER Chris Dean <cdean11@rams.colostate.edu>
 
 
@@ -9,18 +9,21 @@ MAINTAINER Chris Dean <cdean11@rams.colostate.edu>
 # Install core packages
 #################################################################################################
 RUN apt-get update && apt-get install -y \
-        aufs-tools \
         automake \
+        autoconf \
         build-essential \
 	cmake \
         wget \
         git \
         libbz2-dev \
         unzip \
-        python \
 	tar \
 	zlib1g-dev \
-	libncurses5-dev
+	libncurses5-dev \
+        meson \
+        liblzma-dev \
+        pkg-config
+
 	
 
 #################################################################################################
@@ -38,13 +41,15 @@ RUN git clone https://github.com/BenLangmead/bowtie2.git && \
 #################################################################################################
 RUN git clone https://github.com/samtools/htslib.git && \
 	cd htslib && \
-	autoheader && \
-	autoconf && \
+        git submodule update --init --recursive && \ 
+	autoreconf -i && \
 	./configure && \
 	make && \
 	make install && \
 	cd / && \
 	rm -rf htslib
+
+
 
 #################################################################################################
 # Install Samtools
@@ -73,11 +78,10 @@ RUN wget https://github.com/samtools/bcftools/releases/download/1.3.1/bcftools-1
 #################################################################################################
 # Install Freebayes
 #################################################################################################
-RUN git clone --recursive git://github.com/ekg/freebayes.git && \
+RUN git clone https://github.com/ekg/freebayes.git && \
 	cd freebayes && \
-	make && \
-	make install && \
-	cd / && \
+        git submodule update --init --recursive && \
+        meson build/ --buildtype debug && \
 	rm -rf freebayes
 
 ################################################################################################
@@ -104,8 +108,8 @@ RUN apt-get install -y \
 # Install Figtree
 ################################################################################################
 RUN cd /opt && \
-	git clone https://github.com/cdeanj/figtree.git && \
-	chmod u+x figtree/lib/figtree.jar && \
+	git clone https://github.com/rambaut/figtree/ && \
+	chmod u+x figtree/release/Linux/scripts/figtree && \
 	cd /
 
 ################################################################################################
@@ -123,12 +127,11 @@ RUN cd /opt && \
 # Install kSNP3 and dependencies
 ################################################################################################
 RUN cd /opt && \
-	apt-get install -y tcsh && \
-	rm -rf /var/lib/apt/lists/* && \
 	cd /opt && \
-	git clone https://github.com/cdeanj/kSNP3.git && \
-	mv kSNP3 /usr/local && \
-	cd /
+        wget https://sourceforge.net/projects/ksnp/files/kSNP4%20Linux%20package.zip -O ksnp4.zip && \
+        unzip ksnp4.zip && \
+        chmod +x kSNP4\ Linux\ package/kSNP4pkg/* && \
+	mv kSNP4\ Linux\ package/kSNP4pkg/* /usr/local/bin
 
 ################################################################################################
 # Install ResistomeAnalyzer
