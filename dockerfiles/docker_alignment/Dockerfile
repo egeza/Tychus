@@ -1,29 +1,28 @@
 #################################################################################################
 # Dockerfile to run the Nextflow alignment pipeline
 #################################################################################################
-FROM ubuntu:22.04
+FROM ubuntu:16.04
 MAINTAINER Chris Dean <cdean11@rams.colostate.edu>
 
+ENV PATH="/usr/local/kSNP3/:${PATH}"
 
 #################################################################################################
 # Install core packages
 #################################################################################################
 RUN apt-get update && apt-get install -y \
+        aufs-tools \
         automake \
-        autoconf \
         build-essential \
 	cmake \
         wget \
         git \
         libbz2-dev \
         unzip \
+        python \
 	tar \
 	zlib1g-dev \
 	libncurses5-dev \
-        meson \
-        liblzma-dev \
-        pkg-config
-
+	liblzma-dev
 	
 
 #################################################################################################
@@ -41,15 +40,13 @@ RUN git clone https://github.com/BenLangmead/bowtie2.git && \
 #################################################################################################
 RUN git clone https://github.com/samtools/htslib.git && \
 	cd htslib && \
-        git submodule update --init --recursive && \ 
-	autoreconf -i && \
+	autoheader && \
+	autoconf && \
 	./configure && \
 	make && \
 	make install && \
 	cd / && \
 	rm -rf htslib
-
-
 
 #################################################################################################
 # Install Samtools
@@ -78,24 +75,25 @@ RUN wget https://github.com/samtools/bcftools/releases/download/1.3.1/bcftools-1
 #################################################################################################
 # Install Freebayes
 #################################################################################################
-RUN git clone https://github.com/ekg/freebayes.git && \
+RUN git clone --recursive git://github.com/ekg/freebayes.git && \
 	cd freebayes && \
-        git submodule update --init --recursive && \
-        meson build/ --buildtype debug && \
+	make && \
+	make install && \
+	cd / && \
 	rm -rf freebayes
 
 ################################################################################################
 # Install Jellyfish
 ################################################################################################
-RUN cd /opt && \
-	wget https://github.com/gmarcais/Jellyfish/releases/download/v2.2.6/jellyfish-2.2.6.tar.gz && \
-        tar -xvf jellyfish-2.2.6.tar.gz && \
-        cd jellyfish-2.2.6 && \
-        ./configure && \
-        make -j 4 && \
-	ln -s /opt/jellyfish-2.2.6/bin/jellyfish /usr/bin && \
-	cd / && \
-	rm /opt/jellyfish-2.2.6.tar.gz
+#RUN cd /opt && \
+#	wget https://github.com/gmarcais/Jellyfish/releases/download/v2.2.6/jellyfish-2.2.6.tar.gz && \
+#        tar -xvf jellyfish-2.2.6.tar.gz && \
+#        cd jellyfish-2.2.6 && \
+#        ./configure && \
+#        make -j 4 && \
+#	ln -s /opt/jellyfish-2.2.6/bin/jellyfish /usr/bin && \
+#	cd / && \
+#	rm /opt/jellyfish-2.2.6.tar.gz
 
 ################################################################################################
 # Install Java
@@ -108,8 +106,12 @@ RUN apt-get install -y \
 # Install Figtree
 ################################################################################################
 RUN cd /opt && \
-	git clone https://github.com/rambaut/figtree/ && \
-	chmod u+x figtree/release/Linux/scripts/figtree && \
+	wget https://github.com/rambaut/figtree/releases/download/v1.4.4/FigTree_v1.4.4.tgz  && \
+	tar -zxvf FigTree_v1.4.4.tgz && \
+	cd FigTree_v1.4.4 && \
+	chmod u+x lib/figtree.jar && \
+	cp -puv lib/figtree.jar /usr/local/bin/ && \
+	rm -rf FigTree_v1.4.4 && \
 	cd /
 
 ################################################################################################
@@ -127,11 +129,14 @@ RUN cd /opt && \
 # Install kSNP3 and dependencies
 ################################################################################################
 RUN cd /opt && \
-	cd /opt && \
-        wget https://sourceforge.net/projects/ksnp/files/kSNP4%20Linux%20package.zip -O ksnp4.zip && \
-        unzip ksnp4.zip && \
-        chmod +x kSNP4\ Linux\ package/kSNP4pkg/* && \
-	mv kSNP4\ Linux\ package/kSNP4pkg/* /usr/local/bin
+	apt-get install -y tcsh && \
+	rm -rf /var/lib/apt/lists/* && \
+	wget https://sourceforge.net/projects/ksnp/files/kSNP3.1_Linux_package.zip && \
+	unzip kSNP3.1_Linux_package.zip && \
+	cd kSNP3.1_Linux_package && \
+	mv kSNP3 /usr/local && \
+	cd / && \
+	rm -rf kSNP3.1_Linux_package
 
 ################################################################################################
 # Install ResistomeAnalyzer
@@ -153,7 +158,6 @@ RUN cd /opt && \
 	ln -s /opt/coverage_sampler/csa /usr/bin && \
 	cd /
 
-
-RUN mkdir /SCRATCH
-WORKDIR /SCRATCH
-CMD ["bash"]
+################## UCT Hex specific ###########################
+RUN mkdir -p /researchdata/fhgfs
+RUN mkdir -p /scratch/DB/bio/Tychus
